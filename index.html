@@ -64,20 +64,11 @@
       rawData   = text;                        // сохраняем «как есть» на случай ошибки
 
       const parsed = JSON.parse(text);         // пытаемся распарсить JSON
-      let categories = null;
 
-      if (Array.isArray(parsed)) {
-        categories = parsed[0] && parsed[0].json
-          ? parsed.map(i => i.json)
-          : parsed;
-      } else if (parsed && Array.isArray(parsed.data)) {
-        categories = parsed.data[0] && parsed.data[0].json
-          ? parsed.data.map(i => i.json)
-          : parsed.data;
-      }
+      const categories = normalize(parsed);
 
-      if (!categories) throw new Error('Неподдерживаемый формат ответа');
-
+      
+if (!categories) throw new Error('Неподдерживаемый формат ответа');
       status.remove();
       const frag = document.createDocumentFragment();
 
@@ -111,6 +102,18 @@
       `;
     }
   }
+
+    function normalize(parsed) {
+  if (Array.isArray(parsed)) {
+    return parsed[0]?.json ? parsed.map(i => i.json) : parsed;
+  }
+  if (Array.isArray(parsed?.data)) {
+    const arr = parsed.data;
+    return arr[0]?.json ? arr.map(i => i.json) : arr;
+  }
+  if (parsed?.subcontractors) return [parsed];
+  return null;
+}
 
   // экранируем < > & чтобы JSON красиво отобразился в HTML
   function escapeHtml(str) {
