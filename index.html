@@ -45,50 +45,62 @@
   </div>
 
   <script>
-    /* === 1. Настройте URL вашего Webhook'а n8n === */
-    const API_URL = 'https://betters-technology.site/webhook/categories';
+const API_URL = 'https://betters-technology.site/webhook/categories';
 
-    async function loadCategories() {
-      const root   = document.getElementById('root');
-      const status = document.getElementById('status');
+async function loadCategories() {
+  const root   = document.getElementById('root');
+  const status = document.getElementById('status');
 
-      try {
-        const resp = await fetch(API_URL);
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const categories = await resp.json();      // ожидаем массив
+  try {
+    const resp = await fetch(API_URL);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 
-        root.innerHTML = '';                       // очищаем «Загружаем…»
+    const data = await resp.json();
 
-        categories.forEach(cat => {
-          // Заголовок категории
-          const h2 = document.createElement('h2');
-          h2.textContent = cat.name || 'Без названия';
-          root.appendChild(h2);
+    // ПОДСТРАХОВКА: убедимся, что получили именно массив
+    const categories = Array.isArray(data) ? data
+                   : (Array.isArray(data.data) ? data.data : null);
 
-          // Каждый подрядчик — отдельная карточка
-          (cat.subcontractors || []).forEach(s => {
-            const card = document.createElement('div');
-            card.className = 'card';
-            card.innerHTML = `
-              <strong>${s.name ?? ''}</strong><br>
-              ${s.description ?? ''}<br>
-              ${s.contacts ?? ''}<br>
-              ${s.link ? `<a href="${s.link}" target="_blank" rel="noopener">${s.link}</a>` : ''}
-            `;
-            root.appendChild(card);
-          });
-        });
+    if (!categories) throw new Error('Неподдерживаемый формат ответа');
 
-        if (categories.length === 0) {
-          root.textContent = 'Пусто: категорий нет 🤷‍♂️';
-        }
-      } catch (err) {
-        console.error(err);
-        status.textContent = 'Не удалось загрузить данные. Попробуйте позже.';
-      }
+    status.remove();                          // убираем «Загружаем…»
+    const frag = document.createDocumentFragment();
+
+    categories.forEach(cat => {
+      const h2 = document.createElement('h2');
+      h2.textContent = cat.name || 'Без названия';
+      frag.appendChild(h2);
+
+      (cat.subcontractors || []).forEach(s => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <strong>${s.name ?? ''}</strong><br>
+          ${s.description ?? ''}<br>
+          ${s.contacts ?? ''}<br>
+          ${s.link ? `<a href="${s.link}" target="_blank" rel="noopener">${s.link}</a>` : ''}
+        `;
+        frag.appendChild(card);
+      });
+    });
+
+    if (!categories.length) {
+      root.textContent = 'Пусто: категорий нет 🤷‍♂️';
+    } else {
+      root.appendChild(frag);                 // показываем результат
     }
 
-    document.addEventListener('DOMContentLoaded', loadCategories);
-  </script>
+  } catch (err) {
+    console.error(err);
+    if (status && status.isConnected) {
+      status.textContent = 'Не удалось загрузить данные 😔';
+    } else {
+      root.textContent = 'Не удалось загрузить данные 😔';
+    }
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadCategories);
+</script>
 </body>
 </html>
