@@ -69,6 +69,7 @@
 
       
 if (!categories) throw new Error('Неподдерживаемый формат ответа');
+      
       status.remove();
       const frag = document.createDocumentFragment();
 
@@ -92,7 +93,8 @@ if (!categories) throw new Error('Неподдерживаемый формат 
 
       root.appendChild(frag);
       if (!categories.length) root.textContent = 'Пусто: категорий нет 🤷‍♂️';
-
+console.log('Категорий в массиве:', categories.length);
+console.log('Узлов в frag:', frag.childElementCount);
     } catch (err) {
       console.error(err);
       // выводим сообщение + содержимое rawData (если есть)
