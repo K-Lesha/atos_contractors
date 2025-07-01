@@ -20,9 +20,7 @@
       padding: 1rem;
       line-height: 1.45;
     }
-    h2 {
-      margin: 1.6rem 0 .6rem;
-    }
+    h2 { margin: 1.6rem 0 .6rem; }
     .card {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
@@ -31,12 +29,18 @@
       margin-bottom: 8px;
       box-shadow: 0 1px 2px rgba(0,0,0,.04);
     }
-    a {
-      color: var(--accent);
-      text-decoration: none;
-    }
+    a { color: var(--accent); text-decoration: none; }
     a:hover { text-decoration: underline; }
     #status { opacity: .6; }
+    pre {
+      white-space: pre-wrap;
+      background: #ffe; 
+      border: 1px solid #e6c600;
+      padding: .75rem;
+      border-radius: 6px;
+      overflow-x: auto;
+      margin-top: .5rem;
+    }
   </style>
 </head>
 <body>
@@ -45,62 +49,78 @@
   </div>
 
   <script>
-const API_URL = 'https://betters-technology.site/webhook/categories';
+  const API_URL = 'https://betters-technology.site/webhook/categories';
 
-async function loadCategories() {
-  const root   = document.getElementById('root');
-  const status = document.getElementById('status');
+  async function loadCategories() {
+    const root   = document.getElementById('root');
+    const status = document.getElementById('status');
+    let   rawData = null;                      // ← здесь сохраним ответ целиком
 
-  try {
-    const resp = await fetch(API_URL);
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    try {
+      const resp = await fetch(API_URL);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 
-    const data = await resp.json();
+      const text = await resp.text();          // сначала читаем как текст
+      rawData   = text;                        // сохраняем «как есть» на случай ошибки
 
-    // ПОДСТРАХОВКА: убедимся, что получили именно массив
-    const categories = Array.isArray(data) ? data
-                   : (Array.isArray(data.data) ? data.data : null);
+      const parsed = JSON.parse(text);         // пытаемся распарсить JSON
+      let categories = null;
 
-    if (!categories) throw new Error('Неподдерживаемый формат ответа');
+      if (Array.isArray(parsed)) {
+        categories = parsed[0] && parsed[0].json
+          ? parsed.map(i => i.json)
+          : parsed;
+      } else if (parsed && Array.isArray(parsed.data)) {
+        categories = parsed.data[0] && parsed.data[0].json
+          ? parsed.data.map(i => i.json)
+          : parsed.data;
+      }
 
-    status.remove();                          // убираем «Загружаем…»
-    const frag = document.createDocumentFragment();
+      if (!categories) throw new Error('Неподдерживаемый формат ответа');
 
-    categories.forEach(cat => {
-      const h2 = document.createElement('h2');
-      h2.textContent = cat.name || 'Без названия';
-      frag.appendChild(h2);
+      status.remove();
+      const frag = document.createDocumentFragment();
 
-      (cat.subcontractors || []).forEach(s => {
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.innerHTML = `
-          <strong>${s.name ?? ''}</strong><br>
-          ${s.description ?? ''}<br>
-          ${s.contacts ?? ''}<br>
-          ${s.link ? `<a href="${s.link}" target="_blank" rel="noopener">${s.link}</a>` : ''}
-        `;
-        frag.appendChild(card);
+      categories.forEach(cat => {
+        const h2 = document.createElement('h2');
+        h2.textContent = cat.name || 'Без названия';
+        frag.appendChild(h2);
+
+        (cat.subcontractors || []).forEach(s => {
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.innerHTML = `
+            <strong>${s.name ?? ''}</strong><br>
+            ${s.description ?? ''}<br>
+            ${s.contacts ?? ''}<br>
+            ${s.link ? `<a href="${s.link}" target="_blank" rel="noopener">${s.link}</a>` : ''}
+          `;
+          frag.appendChild(card);
+        });
       });
-    });
 
-    if (!categories.length) {
-      root.textContent = 'Пусто: категорий нет 🤷‍♂️';
-    } else {
-      root.appendChild(frag);                 // показываем результат
-    }
+      root.appendChild(frag);
+      if (!categories.length) root.textContent = 'Пусто: категорий нет 🤷‍♂️';
 
-  } catch (err) {
-    console.error(err);
-    if (status && status.isConnected) {
-      status.textContent = 'Не удалось загрузить данные 😔';
-    } else {
-      root.textContent = 'Не удалось загрузить данные 😔';
+    } catch (err) {
+      console.error(err);
+      // выводим сообщение + содержимое rawData (если есть)
+      root.innerHTML = `
+        <p style="color:#c00;font-weight:600">Не удалось загрузить данные 😔</p>
+        ${rawData ? `<h3>Raw&nbsp;response:</h3><pre>${escapeHtml(rawData)}</pre>` : ''}
+      `;
     }
   }
-}
 
-document.addEventListener('DOMContentLoaded', loadCategories);
-</script>
+  // экранируем < > & чтобы JSON красиво отобразился в HTML
+  function escapeHtml(str) {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  document.addEventListener('DOMContentLoaded', loadCategories);
+  </script>
 </body>
 </html>
