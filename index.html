@@ -34,16 +34,28 @@
     #status { opacity: .6; }
     pre {
       white-space: pre-wrap;
-      background: #ffe; 
+      background: #ffe;
       border: 1px solid #e6c600;
       padding: .75rem;
       border-radius: 6px;
       overflow-x: auto;
       margin-top: .5rem;
     }
+    details > summary {
+      cursor: pointer;
+      user-select: none;
+      font-weight: 600;
+      margin-bottom: .25rem;
+    }
   </style>
 </head>
 <body>
+  <!-- Блок, который всегда покажет "сырые" данные -->
+  <details open>
+    <summary>Raw response</summary>
+    <pre id="raw"></pre>
+  </details>
+
   <div id="root">
     <p id="status">Загружаем данные…</p>
   </div>
@@ -54,6 +66,7 @@
   async function loadCategories() {
     const root   = document.getElementById('root');
     const status = document.getElementById('status');
+    const rawBox = document.getElementById('raw');
     let   rawData = null;                      // ← здесь сохраним ответ целиком
 
     try {
@@ -61,15 +74,14 @@
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 
       const text = await resp.text();          // сначала читаем как текст
-      rawData   = text;                        // сохраняем «как есть» на случай ошибки
+      rawData   = text;                        // сохраняем «как есть»
+      rawBox.textContent = text;               // показываем на экране
 
       const parsed = JSON.parse(text);         // пытаемся распарсить JSON
 
       const categories = normalize(parsed);
+      if (!categories) throw new Error('Неподдерживаемый формат ответа');
 
-      
-if (!categories) throw new Error('Неподдерживаемый формат ответа');
-      
       status.remove();
       const frag = document.createDocumentFragment();
 
@@ -93,8 +105,8 @@ if (!categories) throw new Error('Неподдерживаемый формат 
 
       root.appendChild(frag);
       if (!categories.length) root.textContent = 'Пусто: категорий нет 🤷‍♂️';
-console.log('Категорий в массиве:', categories.length);
-console.log('Узлов в frag:', frag.childElementCount);
+      console.log('Категорий в массиве:', categories.length);
+      console.log('Узлов в frag:', frag.childElementCount);
     } catch (err) {
       console.error(err);
       // выводим сообщение + содержимое rawData (если есть)
@@ -105,17 +117,17 @@ console.log('Узлов в frag:', frag.childElementCount);
     }
   }
 
-    function normalize(parsed) {
-  if (Array.isArray(parsed)) {
-    return parsed[0]?.json ? parsed.map(i => i.json) : parsed;
+  function normalize(parsed) {
+    if (Array.isArray(parsed)) {
+      return parsed[0]?.json ? parsed.map(i => i.json) : parsed;
+    }
+    if (Array.isArray(parsed?.data)) {
+      const arr = parsed.data;
+      return arr[0]?.json ? arr.map(i => i.json) : arr;
+    }
+    if (parsed?.subcontractors) return [parsed];
+    return null;
   }
-  if (Array.isArray(parsed?.data)) {
-    const arr = parsed.data;
-    return arr[0]?.json ? arr.map(i => i.json) : arr;
-  }
-  if (parsed?.subcontractors) return [parsed];
-  return null;
-}
 
   // экранируем < > & чтобы JSON красиво отобразился в HTML
   function escapeHtml(str) {
