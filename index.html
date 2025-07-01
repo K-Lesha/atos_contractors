@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Категории подрядчиков</title>
+  <style>
+    :root {
+      --bg: #f9f9f9;
+      --fg: #212121;
+      --card-bg: #fff;
+      --card-border: #ddd;
+      --accent: #1976d2;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, Roboto, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      margin: 0;
+      padding: 1rem;
+      line-height: 1.45;
+    }
+    h2 {
+      margin: 1.6rem 0 .6rem;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 8px 10px;
+      margin-bottom: 8px;
+      box-shadow: 0 1px 2px rgba(0,0,0,.04);
+    }
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    a:hover { text-decoration: underline; }
+    #status { opacity: .6; }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <p id="status">Загружаем данные…</p>
+  </div>
+
+  <script>
+    /* === 1. Настройте URL вашего Webhook'а n8n === */
+    const API_URL = 'https://YOUR-N8N-DOMAIN/webhook/categories';
+
+    async function loadCategories() {
+      const root   = document.getElementById('root');
+      const status = document.getElementById('status');
+
+      try {
+        const resp = await fetch(API_URL);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const categories = await resp.json();      // ожидаем массив
+
+        root.innerHTML = '';                       // очищаем «Загружаем…»
+
+        categories.forEach(cat => {
+          // Заголовок категории
+          const h2 = document.createElement('h2');
+          h2.textContent = cat.name || 'Без названия';
+          root.appendChild(h2);
+
+          // Каждый подрядчик — отдельная карточка
+          (cat.subcontractors || []).forEach(s => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+              <strong>${s.name ?? ''}</strong><br>
+              ${s.description ?? ''}<br>
+              ${s.contacts ?? ''}<br>
+              ${s.link ? `<a href="${s.link}" target="_blank" rel="noopener">${s.link}</a>` : ''}
+            `;
+            root.appendChild(card);
+          });
+        });
+
+        if (categories.length === 0) {
+          root.textContent = 'Пусто: категорий нет 🤷‍♂️';
+        }
+      } catch (err) {
+        console.error(err);
+        status.textContent = 'Не удалось загрузить данные. Попробуйте позже.';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadCategories);
+  </script>
+</body>
+</html>
