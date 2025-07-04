@@ -5,62 +5,135 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Категории подрядчиков</title>
   <style>
-    :root {
-      --bg: #f9f9f9;
-      --fg: #212121;
-      --card-bg: #fff;
-      --card-border: #ddd;
-      --accent: #1976d2;
-    }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, Roboto, "Segoe UI", sans-serif;
-      background: var(--bg);
-      color: var(--fg);
-      margin: 0;
-      padding: 1rem;
-      line-height: 1.45;
-    }
-    .tabs {
-      display: flex;
-      flex-wrap: wrap;
-      margin-bottom: 1rem;
-      gap: 0.5rem;
-    }
-    .tab {
-      background: #eee;
-      border-radius: 4px;
-      padding: 0.5rem 1rem;
-      cursor: pointer;
-      user-select: none;
-    }
-    .tab.active {
-      background: var(--accent);
-      color: white;
-    }
-    .tab-content {
-      display: none;
-    }
-    .tab-content.active {
-      display: block;
-    }
-    .card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 6px;
-      padding: 8px 10px;
-      margin-bottom: 8px;
-      box-shadow: 0 1px 2px rgba(0,0,0,.04);
-    }
-    a { color: var(--accent); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    #status { opacity: .6; }
-  </style>
+  :root {
+    --bg: #ffffff;
+    --fg: #111111;
+    --card-bg: #f5f5f5;
+    --card-border: #cccccc;
+    --accent: #000000;
+    --accent-light: #444444;
+    --radius: 8px;
+    --font: -apple-system, BlinkMacSystemFont, Roboto, "Segoe UI", sans-serif;
+  }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--fg);
+    margin: 0;
+    padding: 2rem;
+    line-height: 1.6;
+  }
+
+  #status {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 1rem;
+  }
+
+  .tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .tab {
+    padding: 0.6rem 1.2rem;
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    background-color: transparent;
+    color: var(--accent);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .tab:hover {
+    background-color: var(--accent-light);
+    color: white;
+  }
+
+  .tab.active {
+    background-color: var(--accent);
+    color: white;
+  }
+
+  .tab-content {
+    display: none;
+  }
+
+  .tab-content.active {
+    display: block;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 1rem 1.2rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+    transition: box-shadow 0.2s ease;
+  }
+
+  .card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  a {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+
+  a:hover {
+    text-decoration: none;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+    @media (max-width: 600px) {
+  body {
+    padding: 1rem;
+  }
+
+  .tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+  }
+
+  .tabs::-webkit-scrollbar {
+    display: none; /* Chrome, Safari */
+  }
+
+  .tab {
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-size: 0.9rem;
+    padding: 0.5rem 0.9rem;
+  }
+
+  .card {
+    padding: 0.8rem 1rem;
+    font-size: 0.95rem;
+  }
+
+  #status {
+    font-size: 0.85rem;
+  }
+}
+</style>
 </head>
 <body>
   <p id="status">Загружаем данные…</p>
   <div class="tabs" id="tabList"></div>
   <div id="tabContents"></div>
-
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script>
     const API_URL = 'https://betters-technology.site/webhook/categories';
 
@@ -137,7 +210,13 @@
       return null;
     }
 
-    document.addEventListener('DOMContentLoaded', loadCategories);
+document.addEventListener('DOMContentLoaded', () => {
+  const tg = window.Telegram.WebApp;
+  tg.ready();
+  tg.expand();
+
+  loadCategories(); // твоя функция загрузки
+});
   </script>
 </body>
 </html>
