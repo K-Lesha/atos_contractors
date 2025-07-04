@@ -117,17 +117,16 @@
     }
   }
 
-  function normalize(parsed) {
-    if (Array.isArray(parsed)) {
-      return parsed[0]?.json ? parsed.map(i => i.json) : parsed;
-    }
-    if (Array.isArray(parsed?.data)) {
-      const arr = parsed.data;
-      return arr[0]?.json ? arr.map(i => i.json) : arr;
-    }
-    if (parsed?.subcontractors) return [parsed];
-    return null;
+function normalize(parsed) {
+  if (Array.isArray(parsed)) {
+    return parsed.map(i => i.json ?? i);  // Поддержка и с json, и без
   }
+  if (Array.isArray(parsed?.data)) {
+    return parsed.data.map(i => i.json ?? i);
+  }
+  if (parsed?.subcontractors) return [parsed];
+  return null;
+}
 
   // экранируем < > & чтобы JSON красиво отобразился в HTML
   function escapeHtml(str) {
