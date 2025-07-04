@@ -20,7 +20,29 @@
       padding: 1rem;
       line-height: 1.45;
     }
-    h2 { margin: 1.6rem 0 .6rem; }
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+      gap: 0.5rem;
+    }
+    .tab {
+      background: #eee;
+      border-radius: 4px;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      user-select: none;
+    }
+    .tab.active {
+      background: var(--accent);
+      color: white;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
     .card {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
@@ -32,115 +54,90 @@
     a { color: var(--accent); text-decoration: none; }
     a:hover { text-decoration: underline; }
     #status { opacity: .6; }
-    pre {
-      white-space: pre-wrap;
-      background: #ffe;
-      border: 1px solid #e6c600;
-      padding: .75rem;
-      border-radius: 6px;
-      overflow-x: auto;
-      margin-top: .5rem;
-    }
-    details > summary {
-      cursor: pointer;
-      user-select: none;
-      font-weight: 600;
-      margin-bottom: .25rem;
-    }
   </style>
 </head>
 <body>
-  <!-- Блок, который всегда покажет "сырые" данные -->
-  <details open>
-    <summary>Raw response</summary>
-    <pre id="raw"></pre>
-  </details>
-
-  <div id="root">
-    <p id="status">Загружаем данные…</p>
-  </div>
+  <p id="status">Загружаем данные…</p>
+  <div class="tabs" id="tabList"></div>
+  <div id="tabContents"></div>
 
   <script>
-  const API_URL = 'https://betters-technology.site/webhook/categories';
+    const API_URL = 'https://betters-technology.site/webhook/categories';
 
-  async function loadCategories() {
-    const root   = document.getElementById('root');
-    const status = document.getElementById('status');
-    const rawBox = document.getElementById('raw');
-    let   rawData = null;                      // ← здесь сохраним ответ целиком
+    async function loadCategories() {
+      const tabList = document.getElementById('tabList');
+      const tabContents = document.getElementById('tabContents');
+      const status = document.getElementById('status');
 
-    try {
-      const resp = await fetch(API_URL);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      try {
+        const resp = await fetch(API_URL);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 
-      const text = await resp.text();          // сначала читаем как текст
-      rawData   = text;                        // сохраняем «как есть»
-      rawBox.textContent = text;               // показываем на экране
+        const parsed = await resp.json();
+        const categories = normalize(parsed);
+        if (!categories) throw new Error('Неподдерживаемый формат ответа');
 
-      const parsed = JSON.parse(text);         // пытаемся распарсить JSON
+        status.remove();
 
-      const categories = normalize(parsed);
-      if (!categories) throw new Error('Неподдерживаемый формат ответа');
+        categories.forEach((cat, index) => {
+          const catId = `cat-${index}`;
+          
+          // Создание таба
+          const tab = document.createElement('div');
+          tab.className = 'tab';
+          tab.textContent = cat.name || 'Без названия';
+          tab.dataset.target = catId;
+          if (index === 0) tab.classList.add('active');
+          tabList.appendChild(tab);
 
-      status.remove();
-      const frag = document.createDocumentFragment();
+          // Создание контента таба
+          const content = document.createElement('div');
+          content.id = catId;
+          content.className = 'tab-content' + (index === 0 ? ' active' : '');
 
-      categories.forEach(cat => {
-        const h2 = document.createElement('h2');
-        h2.textContent = cat.name || 'Без названия';
-        frag.appendChild(h2);
+          (cat.subcontractors || []).forEach(s => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+              <strong>${s.name ?? ''}</strong><br>
+              ${s.description ?? ''}<br>
+              ${s.contacts ?? ''}<br>
+              ${s.link ? `<a href="${s.link}" target="_blank" rel="noopener">${s.link}</a>` : ''}
+            `;
+            content.appendChild(card);
+          });
 
-        (cat.subcontractors || []).forEach(s => {
-          const card = document.createElement('div');
-          card.className = 'card';
-          card.innerHTML = `
-            <strong>${s.name ?? ''}</strong><br>
-            ${s.description ?? ''}<br>
-            ${s.contacts ?? ''}<br>
-            ${s.link ? `<a href="${s.link}" target="_blank" rel="noopener">${s.link}</a>` : ''}
-          `;
-          frag.appendChild(card);
+          tabContents.appendChild(content);
         });
-      });
 
-      root.appendChild(frag);
-      if (!categories.length) root.textContent = 'Пусто: категорий нет 🤷‍♂️';
-      console.log('Категорий в массиве:', categories.length);
-      console.log('Узлов в frag:', frag.childElementCount);
-    } catch (err) {
-      console.error(err);
-      // выводим сообщение + содержимое rawData (если есть)
-      root.innerHTML = `
-        <p style="color:#c00;font-weight:600">Не удалось загрузить данные 😔</p>
-        ${rawData ? `<h3>Raw&nbsp;response:</h3><pre>${escapeHtml(rawData)}</pre>` : ''}
-      `;
+        // Навешиваем переключение табов
+        tabList.addEventListener('click', e => {
+          if (!e.target.classList.contains('tab')) return;
+          const targetId = e.target.dataset.target;
+
+          // Убираем все активные
+          document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+          document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+
+          // Активируем нужный
+          e.target.classList.add('active');
+          document.getElementById(targetId).classList.add('active');
+        });
+
+      } catch (err) {
+        console.error(err);
+        status.textContent = 'Ошибка загрузки данных';
+      }
     }
-  }
 
-function normalize(parsed) {
-   console.log('parsed:', parsed);
+    function normalize(parsed) {
+      if (Array.isArray(parsed)) return parsed;
+      if (Array.isArray(parsed?.data)) return parsed.data;
+      if (parsed?.subcontractors) return [parsed];
+      return null;
+    }
 
-  if (Array.isArray(parsed)) {
-    return parsed; // ← просто возвращаем массив объектов
-  }
-  if (Array.isArray(parsed?.data)) {
-    return parsed.data;
-  }
-  if (parsed?.subcontractors) {
-    return [parsed];
-  }
-  return null;
-}
-
-  // экранируем < > & чтобы JSON красиво отобразился в HTML
-  function escapeHtml(str) {
-    return str
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
-  }
-
-  document.addEventListener('DOMContentLoaded', loadCategories);
+    document.addEventListener('DOMContentLoaded', loadCategories);
   </script>
 </body>
 </html>
